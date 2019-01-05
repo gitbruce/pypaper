@@ -8,58 +8,53 @@ import matplotlib.pyplot as plt
 folderpath = './newImages/'
 filepath = folderpath + "IMG_20181205_215808.jpg"
 
-def teacher_removal(image_path):
-	"""
-    :param thresh: 二值化的阈值(thresh越小印章去除的效果越好，但其他的横线会有很多的空缺口，
-    可能会导致后面表格识别的准确度降低)
-    :param color: 0: blue. 1: green. 2: red.
-    :return: new_image_path
-    """
-	image = cv2.imread(image_path)  # shape: (1080, 1863, 3)
+def teacher_remove(image_path):
+	src = cv2.imread(image_path)  # shape: (1080, 1863, 3)
+	image = src.copy()
 	hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+	# CLAHE (Contrast Limited Adaptive Histogram Equalization)
+	ImageUtils.clahe_hsv(hsv)
+	mask = ImageUtils.get_hsvmask(hsv, 160, 70, 70, 30)
+	mask = ImageUtils.erode_dilate(mask, 3)
 
-	teacher1_lower = np.array([280/2, 50, 0])
-	teacher1_upper = np.array([360/2,255,255])
-	teacher1_mask = cv2.inRange(hsv, teacher1_lower, teacher1_upper)
-	teacher1_remove = cv2.bitwise_not(image, image, mask=teacher1_mask)
+	result = ImageUtils.swap_color(image, mask, 255)
+	# ImageUtils.show_images([src, result], 1)
+	return result
 
-	teacher2_lower = np.array([320/2, 100,80])
-	teacher2_upper = np.array([360/2,255,255])
-	teacher2_mask = cv2.inRange(hsv, teacher2_lower, teacher2_upper)
-	teacher2_remove = cv2.bitwise_not(image, image, mask=teacher2_mask)
-	# teacher_remove = cv2.morphologyEx(teacher_remove, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))  # "erase" the small white points in the resulting mask
-	ImageUtils.show_images([image, teacher1_remove, teacher2_remove], 1)
 
-	# f = plt.figure()
-	# f.add_subplot(1, 2, 1)
-	# img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-	# plt.imshow(img)
-	# f.add_subplot(1, 2, 2)
-	# plt.imshow(image)
-	# plt.show(block=True)
+def student_remove(image_path):
+	src = cv2.imread(image_path)  # shape: (1080, 1863, 3)
+	image = src.copy()
+	hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+	# CLAHE (Contrast Limited Adaptive Histogram Equalization)
+	ImageUtils.clahe_hsv(hsv)
+	mask = ImageUtils.get_hsvmask(hsv, 220/2, 40, 20, 110/2)
+	mask = ImageUtils.erode_dilate(mask, 3)
+
+	result = ImageUtils.swap_color(image, mask, 255)
+	ImageUtils.show_images([src, result], 1)
+
+
+def print_remove(image_path):
+	src = teacher_remove(image_path)
+	image = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+
+	ret1, th1 = cv2.threshold(image, 200, 255, cv2.THRESH_BINARY)
+
+	ImageUtils.show_images([image, th1], 1)
+
 
 def test(image_path):
-	image = cv2.imread(image_path)  # shape: (1080, 1863, 3)
+	src = cv2.imread(image_path)  # shape: (1080, 1863, 3)
+	image = src.copy()
 	hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-	threshhold = 20
+	#CLAHE (Contrast Limited Adaptive Histogram Equalization)
+	ImageUtils.clahe_hsv(hsv)
+	mask = ImageUtils.get_hsvmask(hsv, 170, 90, 64, 15)
+	mask = ImageUtils.erode_dilate(mask)
+	result = ImageUtils.swap_color(image, mask, 255)
+	ImageUtils.show_images([src, mask, result], 3)
 
-	teacher1_lower = np.array([(182-10)/2, 47, 60])
-	teacher1_upper = np.array([(182)/2, 255, 255])
-	mask = cv2.inRange(hsv, teacher1_lower, teacher1_upper)
-	kernel = np.ones((5, 5), np.uint8)
-	mask = cv2.erode(mask, kernel, iterations=10)
-	mask = cv2.dilate(mask, kernel, iterations=10)
-	mask = cv2.dilate(mask, kernel, iterations=10)
-	mask = cv2.erode(mask, kernel, iterations=10)
-
-	imgEdited = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-	imgGray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	imgGray = cv2.cvtColor(imgGray, cv2.COLOR_GRAY2BGR)
-	imgGray = cv2.bitwise_and(imgGray, imgEdited)
-	imgEdited1 = cv2.bitwise_and(image, imgEdited)
-	imgEdited2 = image - imgEdited1
-
-	ImageUtils.show_images([image, imgEdited, imgGray, imgEdited1, imgEdited2], 1)
 
 def test2():
 	src = './newImages/IMG_20181205_215808.jpg'
@@ -83,8 +78,10 @@ def test2():
 
 
 def main():
-	# teacher_removal(filepath)
-	test('./newImages/rectangle.png')
+	# teacher_remove(filepath)
+	# student_remove(filepath)
+	print_remove(filepath)
+	# test('./newImages/post-dominant-color.png')
 	# test2()
 	# rotate()
 

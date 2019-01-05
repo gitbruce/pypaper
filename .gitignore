@@ -1,3 +1,5 @@
 images/
 newImages/
 exam/
+.idea/
+__pycache__/
